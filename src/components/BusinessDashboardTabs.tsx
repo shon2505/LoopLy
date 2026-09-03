@@ -6,6 +6,8 @@ import { VerificationMethod } from "@prisma/client";
 import QRCodeDisplay from "@/components/QRCodeDisplay";
 import BusinessRequestsPanel from "@/components/BusinessRequestsPanel";
 import BusinessRewardsPanel from "@/components/BusinessRewardsPanel";
+import BusinessAnalyticsPanel from "@/components/BusinessAnalyticsPanel";
+import BusinessMembersPanel from "@/components/BusinessMembersPanel";
 import {
   QrCode,
   Award,
@@ -22,6 +24,8 @@ import {
   Sparkles,
   Gift,
   ClipboardList,
+  BarChart3,
+  UserCheck,
 } from "lucide-react";
 
 interface LoyaltyData {
@@ -58,7 +62,9 @@ export default function BusinessDashboardTabs({
   memberCount,
 }: BusinessDashboardTabsProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "requests" | "rewards" | "qr" | "loyalty" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "requests" | "rewards" | "members" | "qr" | "loyalty" | "settings"
+  >("overview");
 
   // Business Name Form State
   const [businessName, setBusinessName] = useState(business.name);
@@ -180,6 +186,19 @@ export default function BusinessDashboardTabs({
 
         <button
           type="button"
+          onClick={() => setActiveTab("members")}
+          className={`py-2.5 px-4 rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === "members"
+              ? "bg-white border border-slate-200 border-b-transparent text-indigo-600 font-bold shadow-xs"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <UserCheck className="w-3.5 h-3.5" />
+          Members
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab("rewards")}
           className={`py-2.5 px-4 rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === "rewards"
@@ -234,55 +253,10 @@ export default function BusinessDashboardTabs({
       {/* TAB 1: OVERVIEW */}
       {activeTab === "overview" && (
         <div className="space-y-6">
-          {/* Key Metrics Grid */}
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                Total Members
-              </span>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-black text-slate-900">{memberCount}</span>
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <Users className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-500">Customers joined via your QR</p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                Visit Goal
-              </span>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-black text-slate-900">{requiredVisits} visits</span>
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <Award className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-500">To unlock: {rewardTitle}</p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                Verification Method
-              </span>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-900">
-                  {verificationMethod === "BILL" ? "Bill Upload" : "Visit Confirmation"}
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  {verificationMethod === "BILL" ? (
-                    <Receipt className="w-4 h-4" />
-                  ) : (
-                    <FileCheck className="w-4 h-4" />
-                  )}
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                {verificationMethod === "BILL" ? "Customer uploads receipt" : "One-tap approval"}
-              </p>
-            </div>
-          </div>
+          {/* Live Analytics Dashboard */}
+          <BusinessAnalyticsPanel
+            onNavigateToTab={(tab) => setActiveTab(tab)}
+          />
 
           {/* Business & Loyalty Summary with QR Preview */}
           <div className="grid md:grid-cols-12 gap-6 items-start">
@@ -378,6 +352,17 @@ export default function BusinessDashboardTabs({
             businessName={business.name}
             requiredVisits={business.loyaltyProgram.requiredVisits}
           />
+        </div>
+      )}
+
+      {/* TAB: MEMBERS */}
+      {activeTab === "members" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Loyalty Club Members</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Track and manage customers enrolled in your loyalty program.</p>
+          </div>
+          <BusinessMembersPanel />
         </div>
       )}
 
