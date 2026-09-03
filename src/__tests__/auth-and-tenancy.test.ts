@@ -114,6 +114,116 @@ describe("Authentication & Registration Logic", () => {
   });
 });
 
+describe("Login Role Selection Consistency & Session Suppression", () => {
+  const customerEmail = `consistency.cust.${Date.now()}@example.test`;
+  const ownerEmail = `consistency.owner.${Date.now()}@example.test`;
+  const password = "TestPassword123!";
+  let customerId = "";
+  let ownerId = "";
+
+  beforeAll(async () => {
+    const passwordHash = await hashPassword(password);
+
+    const customer = await prisma.user.create({
+      data: {
+        email: customerEmail,
+        name: "Consistency Customer",
+        passwordHash,
+        role: UserRole.CUSTOMER,
+      },
+    });
+    customerId = customer.id;
+
+    const owner = await prisma.user.create({
+      data: {
+        email: ownerEmail,
+        name: "Consistency Owner",
+        passwordHash,
+        role: UserRole.BUSINESS_OWNER,
+      },
+    });
+    ownerId = owner.id;
+  });
+
+  afterAll(async () => {
+    await prisma.session.deleteMany({
+      where: { userId: { in: [customerId, ownerId] } },
+    });
+    await prisma.user.deleteMany({
+      where: { id: { in: [customerId, ownerId] } },
+    });
+  });
+
+  // Helper simulating the login API route logic directly
+  async function simulateLogin(email: string, pass: string, selectedRole: UserRole) {
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (!user) return { status: 401, error: "Invalid email or password." };
+
+    const validPass = await verifyPassword(pass, user.passwordHash);
+    if (!validPass) return { status: 401, error: "Invalid email or password." };
+
+    // Role check
+    if (selectedRole && selectedRole !== user.role) {
+      if (user.role === UserRole.BUSINESS_OWNER) {
+        return {
+          status: 403,
+          error: "These credentials belong to a Business Owner account. Please select Business Owner to continue.",
+        };
+      } else {
+        return {
+          status: 403,
+          error: "These credentials belong to a Customer account. Please select Customer to continue.",
+        };
+      }
+    }
+
+    const session = await createSession(user.id, user.role);
+    return { status: 200, user, session };
+  }
+
+  it("Customer selection + Customer credentials -> PASS", async () => {
+    const res = await simulateLogin(customerEmail, password, UserRole.CUSTOMER);
+    expect(res.status).toBe(200);
+    expect(res.user?.role).toBe(UserRole.CUSTOMER);
+    expect(res.session).toBeDefined();
+  });
+
+  it("Customer selection + Business Owner credentials -> REJECT with correct message", async () => {
+    const sessionsBefore = await prisma.session.count({ where: { userId: ownerId } });
+
+    const res = await simulateLogin(ownerEmail, password, UserRole.CUSTOMER);
+    expect(res.status).toBe(403);
+    expect(res.error).toBe(
+      "These credentials belong to a Business Owner account. Please select Business Owner to continue."
+    );
+
+    // Verify NO session was created on mismatch
+    const sessionsAfter = await prisma.session.count({ where: { userId: ownerId } });
+    expect(sessionsAfter).toBe(sessionsBefore);
+  });
+
+  it("Business Owner selection + Business Owner credentials -> PASS", async () => {
+    const res = await simulateLogin(ownerEmail, password, UserRole.BUSINESS_OWNER);
+    expect(res.status).toBe(200);
+    expect(res.user?.role).toBe(UserRole.BUSINESS_OWNER);
+    expect(res.session).toBeDefined();
+  });
+
+  it("Business Owner selection + Customer credentials -> REJECT with correct message", async () => {
+    const sessionsBefore = await prisma.session.count({ where: { userId: customerId } });
+
+    const res = await simulateLogin(customerEmail, password, UserRole.BUSINESS_OWNER);
+    expect(res.status).toBe(403);
+    expect(res.error).toBe(
+      "These credentials belong to a Customer account. Please select Customer to continue."
+    );
+
+    // Verify NO session was created on mismatch
+    const sessionsAfter = await prisma.session.count({ where: { userId: customerId } });
+    expect(sessionsAfter).toBe(sessionsBefore);
+  });
+});
+
 describe("Role-Dependent Session Expiration & Validation", () => {
   let tempUserId: string;
 

@@ -37,6 +37,7 @@ export const UserRegistrationSchema = z.object({
 export const UserLoginSchema = z.object({
   email: z.string().email("Invalid email address").toLowerCase().trim(),
   password: z.string().min(1, "Password is required"),
+  role: UserRoleSchema.optional(),
 });
 
 export const BusinessCreateSchema = z.object({
