@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { VerificationMethod } from "@prisma/client";
 import QRCodeDisplay from "@/components/QRCodeDisplay";
+import BusinessRequestsPanel from "@/components/BusinessRequestsPanel";
+import BusinessRewardsPanel from "@/components/BusinessRewardsPanel";
 import {
   QrCode,
   Award,
@@ -18,6 +20,8 @@ import {
   ShieldCheck,
   Building2,
   Sparkles,
+  Gift,
+  ClipboardList,
 } from "lucide-react";
 
 interface LoyaltyData {
@@ -54,7 +58,7 @@ export default function BusinessDashboardTabs({
   memberCount,
 }: BusinessDashboardTabsProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "qr" | "loyalty" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "requests" | "rewards" | "qr" | "loyalty" | "settings">("overview");
 
   // Business Name Form State
   const [businessName, setBusinessName] = useState(business.name);
@@ -159,6 +163,32 @@ export default function BusinessDashboardTabs({
         >
           <Building2 className="w-3.5 h-3.5" />
           Overview
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("requests")}
+          className={`py-2.5 px-4 rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === "requests"
+              ? "bg-white border border-slate-200 border-b-transparent text-indigo-600 font-bold shadow-xs"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <ClipboardList className="w-3.5 h-3.5" />
+          Requests
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("rewards")}
+          className={`py-2.5 px-4 rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === "rewards"
+              ? "bg-white border border-slate-200 border-b-transparent text-indigo-600 font-bold shadow-xs"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <Gift className="w-3.5 h-3.5" />
+          Redeem Rewards
         </button>
 
         <button
@@ -334,6 +364,31 @@ export default function BusinessDashboardTabs({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB: REQUESTS */}
+      {activeTab === "requests" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Verification Requests</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Review and approve customer visit requests for your business.</p>
+          </div>
+          <BusinessRequestsPanel
+            businessName={business.name}
+            requiredVisits={business.loyaltyProgram.requiredVisits}
+          />
+        </div>
+      )}
+
+      {/* TAB: REWARDS (REDEEM) */}
+      {activeTab === "rewards" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Reward Redemptions</h3>
+            <p className="text-xs text-slate-500 mt-0.5">When a customer shows their reward screen, tap &quot;Redeem&quot; to mark it as used.</p>
+          </div>
+          <BusinessRewardsPanel />
         </div>
       )}
 
