@@ -11,10 +11,10 @@
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
-    "prisma:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "prisma:seed": "ts-node -P tsconfig.seed.json prisma/seed.ts"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "ts-node -P tsconfig.seed.json prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
