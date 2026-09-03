@@ -3,7 +3,14 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { UserRole } from "@prisma/client";
 import { isValidBusinessToken } from "@/lib/token";
-import { Sparkles, Award, ArrowRight, ShieldAlert, CheckCircle2, User, AlertCircle } from "lucide-react";
+import {
+  Sparkles,
+  Award,
+  ArrowRight,
+  ShieldAlert,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -16,17 +23,13 @@ interface JoinPageProps {
 export default async function PublicJoinPage({ params }: JoinPageProps) {
   const { businessToken } = params;
 
-  // 1. Validate token format
   if (!businessToken || !isValidBusinessToken(businessToken)) {
     return <NotFoundState />;
   }
 
-  // 2. Query business & loyalty program
   const business = await prisma.business.findUnique({
     where: { businessToken },
-    include: {
-      loyaltyProgram: true,
-    },
+    include: { loyaltyProgram: true },
   });
 
   if (!business || !business.loyaltyProgram) {
@@ -37,7 +40,7 @@ export default async function PublicJoinPage({ params }: JoinPageProps) {
   const program = business.loyaltyProgram;
   const user = await getCurrentUser();
 
-  // 3. If authenticated as CUSTOMER, check/ensure membership idempotently
+  // If authenticated as CUSTOMER, ensure membership (idempotent)
   let isExistingMember = false;
   if (user && user.role === UserRole.CUSTOMER) {
     const existingMembership = await prisma.membership.findUnique({
@@ -52,7 +55,6 @@ export default async function PublicJoinPage({ params }: JoinPageProps) {
     if (existingMembership) {
       isExistingMember = true;
     } else {
-      // Automatically create membership on first scan when authenticated
       try {
         await prisma.membership.create({
           data: {
@@ -64,30 +66,28 @@ export default async function PublicJoinPage({ params }: JoinPageProps) {
         });
         isExistingMember = true;
       } catch {
-        // Safe concurrency catch
         isExistingMember = true;
       }
     }
   }
 
   return (
-    <div className="flex-1 flex flex-col justify-between p-6">
-      <div>
-        <header className="pt-6 pb-6 text-center">
+    <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 py-12 bg-slate-50 min-h-screen">
+      <div className="w-full max-w-md bg-white sm:rounded-3xl sm:border sm:border-slate-200 sm:shadow-sm p-6 sm:p-8 space-y-6">
+        {/* Header */}
+        <header className="pb-4 text-center border-b border-slate-100">
+          <Link href="/" className="inline-flex items-center gap-2 text-indigo-700 font-bold text-sm mb-4">
+            <Sparkles className="w-4 h-4" /> Looply
+          </Link>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold mb-3">
-            <Sparkles className="w-3.5 h-3.5" />
             Official Loyalty Program
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            {name}
-          </h1>
-          <p className="mt-1 text-xs text-slate-500">
-            {program.programName}
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{name}</h1>
+          <p className="mt-1 text-xs text-slate-500">{program.programName}</p>
         </header>
 
         {/* Loyalty Reward Highlight Card */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-slate-50 border border-indigo-100 shadow-sm space-y-3 mb-6">
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-slate-50 border border-indigo-100 shadow-sm space-y-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
               <Award className="w-4 h-4" />
@@ -128,7 +128,7 @@ export default async function PublicJoinPage({ params }: JoinPageProps) {
           )}
         </div>
 
-        {/* Dynamic Action Section depending on Authentication State */}
+        {/* Dynamic Action Section */}
         <div className="space-y-3">
           {!user && (
             <div className="space-y-3">
@@ -192,24 +192,24 @@ export default async function PublicJoinPage({ params }: JoinPageProps) {
             </div>
           )}
         </div>
-      </div>
 
-      <footer className="pt-6 pb-2 text-center text-xs text-slate-400">
-        Looply &copy; {new Date().getFullYear()} — Simple Small Business Loyalty
-      </footer>
+        <footer className="pt-4 text-center text-xs text-slate-400">
+          Looply &copy; {new Date().getFullYear()} — Simple Small Business Loyalty
+        </footer>
+      </div>
     </div>
   );
 }
 
 function NotFoundState() {
   return (
-    <div className="flex-1 flex flex-col justify-between p-6">
-      <div className="my-auto text-center space-y-3">
+    <div className="flex-1 flex flex-col justify-center items-center p-6 py-12 bg-slate-50 min-h-screen">
+      <div className="text-center space-y-3 max-w-xs">
         <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center mx-auto mb-2">
           <AlertCircle className="w-6 h-6" />
         </div>
         <h1 className="text-xl font-bold text-slate-900">Business Not Found</h1>
-        <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+        <p className="text-xs text-slate-500 leading-relaxed">
           This loyalty QR code or join link is invalid or has expired. Please check with the business for a new link.
         </p>
         <div className="pt-4">
@@ -221,9 +221,6 @@ function NotFoundState() {
           </Link>
         </div>
       </div>
-      <footer className="pt-6 pb-2 text-center text-xs text-slate-400">
-        Looply &copy; {new Date().getFullYear()}
-      </footer>
     </div>
   );
 }

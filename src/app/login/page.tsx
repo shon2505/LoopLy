@@ -34,7 +34,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Route based on authenticated user's actual role
       if (data.user.role === UserRole.BUSINESS_OWNER) {
         router.push("/business");
       } else {
@@ -48,9 +47,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col justify-between p-6">
-      <div>
-        <header className="pt-6 pb-6">
+    <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 py-12 min-h-screen bg-slate-50">
+      <div className="w-full max-w-md bg-white sm:rounded-3xl sm:border sm:border-slate-200 sm:shadow-sm p-6 sm:p-8 space-y-6">
+        <header>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold mb-3">
             <Sparkles className="w-3.5 h-3.5" />
             Looply Loyalty
@@ -64,7 +63,7 @@ export default function LoginPage() {
         </header>
 
         {/* Role Selection Tabs */}
-        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl mb-6">
+        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
           <button
             type="button"
             onClick={() => setRole(UserRole.CUSTOMER)}
@@ -92,17 +91,14 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
             <span className="font-semibold">Error:</span> {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label
-              htmlFor="email"
-              className="block text-xs font-medium text-slate-700 mb-1"
-            >
+            <label htmlFor="email" className="block text-xs font-medium text-slate-700 mb-1">
               Email Address
             </label>
             <input
@@ -118,10 +114,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-xs font-medium text-slate-700 mb-1"
-            >
+            <label htmlFor="password" className="block text-xs font-medium text-slate-700 mb-1">
               Password
             </label>
             <input
@@ -152,7 +145,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-4 text-center">
+        <div className="text-center">
           <p className="text-xs text-slate-500">
             Don&apos;t have an account?{" "}
             <Link
@@ -163,11 +156,11 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
-      </div>
 
-      <div className="pt-6 pb-2 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5">
-        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-        Encrypted server-side HTTP-only session
+        <div className="text-center text-xs text-slate-400 flex items-center justify-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+          Encrypted server-side HTTP-only session
+        </div>
       </div>
     </div>
   );

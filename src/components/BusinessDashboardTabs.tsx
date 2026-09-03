@@ -1,0 +1,599 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { VerificationMethod } from "@prisma/client";
+import QRCodeDisplay from "@/components/QRCodeDisplay";
+import {
+  QrCode,
+  Award,
+  Settings,
+  Users,
+  CheckCircle2,
+  AlertCircle,
+  Save,
+  Loader2,
+  FileCheck,
+  Receipt,
+  ShieldCheck,
+  Building2,
+  Sparkles,
+} from "lucide-react";
+
+interface LoyaltyData {
+  id: string;
+  programName: string;
+  requiredVisits: number;
+  rewardTitle: string;
+  rewardDescription: string | null;
+  rewardValidityDays: number;
+  verificationMethod: VerificationMethod;
+  isActive: boolean;
+}
+
+interface BusinessData {
+  id: string;
+  name: string;
+  businessToken: string;
+  loyaltyProgram: LoyaltyData;
+}
+
+interface BusinessDashboardTabsProps {
+  business: BusinessData;
+  joinUrl: string;
+  qrSvg: string;
+  qrDataUrl: string;
+  memberCount: number;
+}
+
+export default function BusinessDashboardTabs({
+  business,
+  joinUrl,
+  qrSvg,
+  qrDataUrl,
+  memberCount,
+}: BusinessDashboardTabsProps) {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"overview" | "qr" | "loyalty" | "settings">("overview");
+
+  // Business Name Form State
+  const [businessName, setBusinessName] = useState(business.name);
+  const [savingBusiness, setSavingBusiness] = useState(false);
+  const [businessSuccess, setBusinessSuccess] = useState<string | null>(null);
+  const [businessError, setBusinessError] = useState<string | null>(null);
+
+  // Loyalty Settings Form State
+  const [programName, setProgramName] = useState(business.loyaltyProgram.programName);
+  const [requiredVisits, setRequiredVisits] = useState(business.loyaltyProgram.requiredVisits);
+  const [rewardTitle, setRewardTitle] = useState(business.loyaltyProgram.rewardTitle);
+  const [rewardDescription, setRewardDescription] = useState(business.loyaltyProgram.rewardDescription || "");
+  const [rewardValidityDays, setRewardValidityDays] = useState(business.loyaltyProgram.rewardValidityDays);
+  const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>(
+    business.loyaltyProgram.verificationMethod
+  );
+  const [isActive, setIsActive] = useState(business.loyaltyProgram.isActive);
+  const [savingLoyalty, setSavingLoyalty] = useState(false);
+  const [loyaltySuccess, setLoyaltySuccess] = useState<string | null>(null);
+  const [loyaltyError, setLoyaltyError] = useState<string | null>(null);
+
+  async function handleUpdateBusiness(e: React.FormEvent) {
+    e.preventDefault();
+    setBusinessError(null);
+    setBusinessSuccess(null);
+    setSavingBusiness(true);
+
+    try {
+      const res = await fetch("/api/business", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: businessName.trim() }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setBusinessError(data.error || "Failed to update business name.");
+        setSavingBusiness(false);
+        return;
+      }
+
+      setBusinessSuccess("Business name updated successfully!");
+      setSavingBusiness(false);
+      router.refresh();
+      setTimeout(() => setBusinessSuccess(null), 3000);
+    } catch {
+      setBusinessError("Network error. Please try again.");
+      setSavingBusiness(false);
+    }
+  }
+
+  async function handleUpdateLoyalty(e: React.FormEvent) {
+    e.preventDefault();
+    setLoyaltyError(null);
+    setLoyaltySuccess(null);
+    setSavingLoyalty(true);
+
+    try {
+      const res = await fetch("/api/business/loyalty", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          programName: programName.trim(),
+          requiredVisits: Number(requiredVisits),
+          rewardTitle: rewardTitle.trim(),
+          rewardDescription: rewardDescription.trim(),
+          rewardValidityDays: Number(rewardValidityDays),
+          verificationMethod,
+          isActive,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setLoyaltyError(data.error || "Failed to update loyalty settings.");
+        setSavingLoyalty(false);
+        return;
+      }
+
+      setLoyaltySuccess("Loyalty program updated successfully!");
+      setSavingLoyalty(false);
+      router.refresh();
+      setTimeout(() => setLoyaltySuccess(null), 3000);
+    } catch {
+      setLoyaltyError("Network error. Please try again.");
+      setSavingLoyalty(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Navigation Tabs */}
+      <div className="flex border-b border-slate-200 overflow-x-auto gap-2 pb-px text-xs font-semibold">
+        <button
+          type="button"
+          onClick={() => setActiveTab("overview")}
+          className={`py-2.5 px-4 rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === "overview"
+              ? "bg-white border border-slate-200 border-b-transparent text-indigo-600 font-bold shadow-xs"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <Building2 className="w-3.5 h-3.5" />
+          Overview
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("qr")}
+          className={`py-2.5 px-4 rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === "qr"
+              ? "bg-white border border-slate-200 border-b-transparent text-indigo-600 font-bold shadow-xs"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <QrCode className="w-3.5 h-3.5" />
+          Permanent QR
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("loyalty")}
+          className={`py-2.5 px-4 rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === "loyalty"
+              ? "bg-white border border-slate-200 border-b-transparent text-indigo-600 font-bold shadow-xs"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <Award className="w-3.5 h-3.5" />
+          Loyalty Program
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("settings")}
+          className={`py-2.5 px-4 rounded-t-xl transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === "settings"
+              ? "bg-white border border-slate-200 border-b-transparent text-indigo-600 font-bold shadow-xs"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          Business Settings
+        </button>
+      </div>
+
+      {/* TAB 1: OVERVIEW */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          {/* Key Metrics Grid */}
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                Total Members
+              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-black text-slate-900">{memberCount}</span>
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Users className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500">Customers joined via your QR</p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                Visit Goal
+              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-black text-slate-900">{requiredVisits} visits</span>
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Award className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500">To unlock: {rewardTitle}</p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                Verification Method
+              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-900">
+                  {verificationMethod === "BILL" ? "Bill Upload" : "Visit Confirmation"}
+                </span>
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  {verificationMethod === "BILL" ? (
+                    <Receipt className="w-4 h-4" />
+                  ) : (
+                    <FileCheck className="w-4 h-4" />
+                  )}
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                {verificationMethod === "BILL" ? "Customer uploads receipt" : "One-tap approval"}
+              </p>
+            </div>
+          </div>
+
+          {/* Business & Loyalty Summary with QR Preview */}
+          <div className="grid md:grid-cols-12 gap-6 items-start">
+            <div className="md:col-span-7 p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block">
+                    Active Program
+                  </span>
+                  <h3 className="text-lg font-bold text-slate-900 leading-tight">
+                    {programName}
+                  </h3>
+                  <p className="text-xs text-slate-500">{business.name}</p>
+                </div>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                    isActive ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"
+                  }`}
+                >
+                  {isActive ? "Program Active" : "Paused"}
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs text-slate-600">
+                <div className="flex items-center justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-500">Reward Benefit</span>
+                  <span className="font-bold text-slate-900">{rewardTitle}</span>
+                </div>
+                {rewardDescription && (
+                  <div className="py-1 border-b border-slate-100 text-slate-500">
+                    <p className="leading-relaxed">{rewardDescription}</p>
+                  </div>
+                )}
+                <div className="flex items-center justify-between py-1 border-b border-slate-100">
+                  <span className="text-slate-500">Required Visits</span>
+                  <span className="font-semibold text-slate-800">{requiredVisits} visits</span>
+                </div>
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-slate-500">Reward Validity</span>
+                  <span className="font-semibold text-slate-800">{rewardValidityDays} days</span>
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("loyalty")}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition-colors"
+                >
+                  Edit Loyalty Program
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("qr")}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  View Counter QR
+                </button>
+              </div>
+            </div>
+
+            {/* Quick QR Stand Preview Card */}
+            <div className="md:col-span-5 p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4 text-center">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                Permanent Counter QR
+              </span>
+              <div
+                className="w-40 h-40 mx-auto bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-center shadow-inner"
+                dangerouslySetInnerHTML={{ __html: qrSvg }}
+              />
+              <p className="text-[11px] font-mono text-slate-500 break-all">{joinUrl}</p>
+              <button
+                type="button"
+                onClick={() => setActiveTab("qr")}
+                className="w-full py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-xl transition-colors"
+              >
+                Open Full QR Display & Download →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: QR CODE */}
+      {activeTab === "qr" && (
+        <div className="max-w-md mx-auto">
+          <QRCodeDisplay
+            businessName={business.name}
+            joinUrl={joinUrl}
+            qrSvg={qrSvg}
+            qrDataUrl={qrDataUrl}
+          />
+        </div>
+      )}
+
+      {/* TAB 3: LOYALTY PROGRAM SETTINGS */}
+      {activeTab === "loyalty" && (
+        <div className="max-w-2xl bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Loyalty Program Configuration</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Update required visits, reward benefit, and verification method. Customer progress is never deleted.
+            </p>
+          </div>
+
+          {loyaltySuccess && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span>{loyaltySuccess}</span>
+            </div>
+          )}
+
+          {loyaltyError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              <span>{loyaltyError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleUpdateLoyalty} className="space-y-4">
+            <div>
+              <label htmlFor="edit-program-name" className="block text-xs font-semibold text-slate-800 mb-1">
+                Program Name
+              </label>
+              <input
+                id="edit-program-name"
+                type="text"
+                required
+                value={programName}
+                onChange={(e) => setProgramName(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="edit-visits" className="block text-xs font-semibold text-slate-800 mb-1">
+                  Required Visits
+                </label>
+                <input
+                  id="edit-visits"
+                  type="number"
+                  min={1}
+                  max={100}
+                  required
+                  value={requiredVisits}
+                  onChange={(e) => setRequiredVisits(parseInt(e.target.value, 10) || 1)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-validity" className="block text-xs font-semibold text-slate-800 mb-1">
+                  Reward Validity (Days)
+                </label>
+                <input
+                  id="edit-validity"
+                  type="number"
+                  min={1}
+                  max={365}
+                  required
+                  value={rewardValidityDays}
+                  onChange={(e) => setRewardValidityDays(parseInt(e.target.value, 10) || 30)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="edit-reward-title" className="block text-xs font-semibold text-slate-800 mb-1">
+                Reward Title
+              </label>
+              <input
+                id="edit-reward-title"
+                type="text"
+                required
+                value={rewardTitle}
+                onChange={(e) => setRewardTitle(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="edit-reward-desc" className="block text-xs font-semibold text-slate-800 mb-1">
+                Reward Description
+              </label>
+              <textarea
+                id="edit-reward-desc"
+                rows={2}
+                value={rewardDescription}
+                onChange={(e) => setRewardDescription(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-800">Verification Method</label>
+              <div className="grid sm:grid-cols-2 gap-2">
+                <label
+                  className={`p-3 rounded-xl border flex items-center gap-2.5 cursor-pointer text-xs ${
+                    verificationMethod === VerificationMethod.VISIT_CONFIRMATION
+                      ? "bg-indigo-50/60 border-indigo-300 font-semibold"
+                      : "bg-white border-slate-200"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="editVerificationMethod"
+                    checked={verificationMethod === VerificationMethod.VISIT_CONFIRMATION}
+                    onChange={() => setVerificationMethod(VerificationMethod.VISIT_CONFIRMATION)}
+                  />
+                  <span>Visit Confirmation</span>
+                </label>
+
+                <label
+                  className={`p-3 rounded-xl border flex items-center gap-2.5 cursor-pointer text-xs ${
+                    verificationMethod === VerificationMethod.BILL
+                      ? "bg-indigo-50/60 border-indigo-300 font-semibold"
+                      : "bg-white border-slate-200"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="editVerificationMethod"
+                    checked={verificationMethod === VerificationMethod.BILL}
+                    onChange={() => setVerificationMethod(VerificationMethod.BILL)}
+                  />
+                  <span>Bill Upload</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>Loyalty program is active and accepting visits</span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={savingLoyalty}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {savingLoyalty ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* TAB 4: BUSINESS SETTINGS */}
+      {activeTab === "settings" && (
+        <div className="max-w-2xl bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Business Profile Settings</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Update your shop or salon name. Your permanent QR code and join URL will remain 100% stable and unchanged.
+            </p>
+          </div>
+
+          {businessSuccess && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span>{businessSuccess}</span>
+            </div>
+          )}
+
+          {businessError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              <span>{businessError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleUpdateBusiness} className="space-y-4">
+            <div>
+              <label htmlFor="edit-business-name" className="block text-xs font-semibold text-slate-800 mb-1">
+                Business Name
+              </label>
+              <input
+                id="edit-business-name"
+                type="text"
+                required
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Read-Only Permanent Identifiers */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <span className="font-semibold text-slate-800 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                Permanent QR Join Token (Immutable)
+              </span>
+              <p className="text-slate-500 font-mono text-[11px] select-all break-all">
+                {business.businessToken}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                This token is permanent and cannot be altered. Changing your business name does not break your printed counter QR stand.
+              </p>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="submit"
+                disabled={savingBusiness}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {savingBusiness ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5" />
+                    Update Business Name
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -22,10 +22,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased flex flex-col items-center">
-        <main className="w-full max-w-md min-h-screen bg-white shadow-sm flex flex-col">
-          {children}
-        </main>
+      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased flex flex-col">
+        {children}
       </body>
     </html>
   );
