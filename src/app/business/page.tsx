@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Store, ShieldCheck, Clock, CheckCircle2 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { UserRole } from "@prisma/client";
@@ -53,9 +54,17 @@ export default async function BusinessDashboardPage() {
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs leading-relaxed">
-            <span className="font-semibold block mb-1">Phase 2 Verification Destination</span>
-            Owner authentication, role guard, tenant ownership derivation, and 7-day session persistence are active.
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs leading-relaxed space-y-3">
+            <span className="font-semibold block">Phase 3 Business Hub</span>
+            <p className="text-slate-500">
+              Manage your permanent QR code and loyalty configuration.
+            </p>
+            <Link
+              href="/business/qr"
+              className="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2"
+            >
+              View Permanent Business QR
+            </Link>
           </div>
         </div>
       </div>

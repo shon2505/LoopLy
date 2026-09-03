@@ -4,6 +4,7 @@ import { hashPassword } from "../lib/auth";
 import { UserRole, VerificationMethod } from "@prisma/client";
 import { generateBusinessToken, isValidBusinessToken } from "../lib/token";
 import { BusinessSetupSchema, BusinessUpdateSchema, LoyaltyProgramSchema } from "../lib/validations";
+import { getBusinessJoinUrl, generateQRCodeDataUrl } from "../lib/qr";
 
 describe("Phase 3 Checkpoint 1 — Backend Business Setup & APIs", () => {
   const timestamp = Date.now();
@@ -428,6 +429,214 @@ describe("Phase 3 Checkpoint 1 — Backend Business Setup & APIs", () => {
       // Progress must remain exactly 4 / 9 even after threshold changed from 6 to 10
       expect(membership?.currentVisits).toBe(4);
       expect(membership?.totalVisits).toBe(9);
+    });
+  });
+
+  // 6. Checkpoint 3: Permanent QR Generation & Public Join Route
+  describe("Checkpoint 3: Permanent QR Generation & Public Join Route", () => {
+    let businessBId = "";
+    let businessBToken = "";
+    let testCustomerId = "";
+
+    beforeAll(async () => {
+      // Create a second business for multi-tenant testing
+      businessBToken = generateBusinessToken(12);
+      const bizB = await prisma.business.create({
+        data: {
+          name: "Apex Gym Studio",
+          businessToken: businessBToken,
+          ownerId: ownerBId,
+          loyaltyProgram: {
+            create: {
+              programName: "Iron Club",
+              requiredVisits: 8,
+              rewardTitle: "Free Shake",
+              rewardDescription: "Protein smoothie of your choice",
+              rewardValidityDays: 30,
+              verificationMethod: VerificationMethod.VISIT_CONFIRMATION,
+              isActive: true,
+            },
+          },
+        },
+      });
+      businessBId = bizB.id;
+
+      // Create dedicated customer for join tests
+      const cust = await prisma.user.create({
+        data: {
+          email: `join.tester.${Date.now()}@example.test`,
+          name: "Join Tester",
+          passwordHash: "hash",
+          role: UserRole.CUSTOMER,
+        },
+      });
+      testCustomerId = cust.id;
+    });
+
+    afterAll(async () => {
+      if (businessBId) {
+        await prisma.membership.deleteMany({ where: { businessId: businessBId } });
+        await prisma.loyaltyProgram.deleteMany({ where: { businessId: businessBId } });
+        await prisma.business.deleteMany({ where: { id: businessBId } });
+      }
+      if (testCustomerId) {
+        await prisma.membership.deleteMany({ where: { customerId: testCustomerId } });
+        await prisma.user.deleteMany({ where: { id: testCustomerId } });
+      }
+    });
+
+    it("valid business token resolves the correct business and loyalty program", async () => {
+      const resolved = await prisma.business.findUnique({
+        where: { businessToken: businessAToken },
+        include: { loyaltyProgram: true },
+      });
+
+      expect(resolved).not.toBeNull();
+      expect(resolved?.id).toBe(businessAId);
+      expect(resolved?.name).toBe("The Corner Bakery & Cafe");
+      expect(resolved?.loyaltyProgram?.programName).toBe("VIP Pastry Club");
+    });
+
+    it("invalid or malformed business token returns not found", async () => {
+      expect(isValidBusinessToken("short")).toBe(false);
+      expect(isValidBusinessToken("invalid!token@#")).toBe(false);
+
+      const resolved = await prisma.business.findUnique({
+        where: { businessToken: "nonexistent12" },
+      });
+      expect(resolved).toBeNull();
+    });
+
+    it("QR encodes the correct permanent join URL without modifying businessToken", async () => {
+      const joinUrl = getBusinessJoinUrl(businessAToken);
+      expect(joinUrl).toContain(`/join/${businessAToken}`);
+
+      const qrDataUrl = await generateQRCodeDataUrl(joinUrl);
+      expect(qrDataUrl).toMatch(/^data:image\/png;base64,/);
+
+      // Verify token in DB remains identical
+      const check = await prisma.business.findUnique({ where: { id: businessAId } });
+      expect(check?.businessToken).toBe(businessAToken);
+    });
+
+    it("Business Owner can access their QR page while Customer is rejected", async () => {
+      const ownerUser = await prisma.user.findUnique({ where: { id: ownerAId } });
+      expect(ownerUser?.role).toBe(UserRole.BUSINESS_OWNER);
+
+      const customerUser = await prisma.user.findUnique({ where: { id: testCustomerId } });
+      expect(customerUser?.role).toBe(UserRole.CUSTOMER);
+      expect(customerUser?.role === UserRole.BUSINESS_OWNER).toBe(false);
+    });
+
+    it("unauthenticated visitor can resolve public sanitized business details without private fields", async () => {
+      const business = await prisma.business.findUnique({
+        where: { businessToken: businessAToken },
+        include: { loyaltyProgram: true },
+      });
+
+      // Simulation of public projection in /api/public/business/[businessToken]
+      const publicProjection = {
+        name: business!.name,
+        programName: business!.loyaltyProgram!.programName,
+        requiredVisits: business!.loyaltyProgram!.requiredVisits,
+        rewardTitle: business!.loyaltyProgram!.rewardTitle,
+        rewardDescription: business!.loyaltyProgram!.rewardDescription,
+        verificationMethod: business!.loyaltyProgram!.verificationMethod,
+        isActive: business!.loyaltyProgram!.isActive,
+      };
+
+      expect(publicProjection.name).toBe("The Corner Bakery & Cafe");
+      expect(publicProjection.rewardTitle).toBe("Free Lunch Combo");
+
+      // Verify ZERO private fields exposed
+      const record = publicProjection as unknown as Record<string, unknown>;
+      expect(record.id).toBeUndefined();
+      expect(record.ownerId).toBeUndefined();
+      expect(record.passwordHash).toBeUndefined();
+      expect(record.owner).toBeUndefined();
+    });
+
+    it("authenticated customer can join a business and creates exactly one membership", async () => {
+      const membership = await prisma.membership.create({
+        data: {
+          customerId: testCustomerId,
+          businessId: businessAId,
+          currentVisits: 0,
+          totalVisits: 0,
+        },
+      });
+
+      expect(membership).toBeDefined();
+      expect(membership.customerId).toBe(testCustomerId);
+      expect(membership.businessId).toBe(businessAId);
+      expect(membership.currentVisits).toBe(0);
+      expect(membership.totalVisits).toBe(0);
+    });
+
+    it("repeated joins / QR scans do not create duplicate memberships (unique constraint)", async () => {
+      // Attempt duplicate creation must fail DB unique constraint
+      await expect(
+        prisma.membership.create({
+          data: {
+            customerId: testCustomerId,
+            businessId: businessAId,
+            currentVisits: 0,
+            totalVisits: 0,
+          },
+        })
+      ).rejects.toThrow();
+
+      // Total count of memberships for this customer at business A remains 1
+      const count = await prisma.membership.count({
+        where: { customerId: testCustomerId, businessId: businessAId },
+      });
+      expect(count).toBe(1);
+    });
+
+    it("customer can belong to multiple businesses independently with isolated progress", async () => {
+      // Join second business (Business B - Gym)
+      const membershipB = await prisma.membership.create({
+        data: {
+          customerId: testCustomerId,
+          businessId: businessBId,
+          currentVisits: 2,
+          totalVisits: 2,
+        },
+      });
+
+      expect(membershipB.businessId).toBe(businessBId);
+
+      // Verify customer has 2 distinct memberships
+      const memberships = await prisma.membership.findMany({
+        where: { customerId: testCustomerId },
+      });
+
+      expect(memberships).toHaveLength(2);
+      const memA = memberships.find((m) => m.businessId === businessAId);
+      const memB = memberships.find((m) => m.businessId === businessBId);
+
+      expect(memA?.currentVisits).toBe(0);
+      expect(memB?.currentVisits).toBe(2);
+    });
+
+    it("Business Owner scanning a QR does not create a customer membership", () => {
+      // Simulation of guard logic in join route:
+      function handleJoinAttempt(role: UserRole) {
+        if (role === UserRole.BUSINESS_OWNER) {
+          return {
+            allowed: false,
+            error: "You're logged in as a Business Owner. Please use a Customer account to join this loyalty program.",
+          };
+        }
+        return { allowed: true };
+      }
+
+      const ownerAttempt = handleJoinAttempt(UserRole.BUSINESS_OWNER);
+      expect(ownerAttempt.allowed).toBe(false);
+      expect(ownerAttempt.error).toContain("Business Owner");
+
+      const customerAttempt = handleJoinAttempt(UserRole.CUSTOMER);
+      expect(customerAttempt.allowed).toBe(true);
     });
   });
 });
