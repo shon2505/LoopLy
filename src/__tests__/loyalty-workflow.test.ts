@@ -564,4 +564,19 @@ describe("Phase 5 — Full Loyalty Workflow, Verification, Rewards & Redemption 
       expect(result.count).toBe(0); // Update condition blocked it due to expiresAt > now
     });
   });
+
+  describe("Phase 5E — Storage Service & Bill Upload Fallback Tests", () => {
+    it("uploadBillImage handles buffer storage and returns collision-safe path", async () => {
+      const { uploadBillImage, getBillViewUrl } = await import("../lib/storage");
+      const testBuffer = Buffer.from("fake-bill-image-content");
+      const storagePath = `${customerAId}/${businessAId}/test_bill.png`;
+
+      const result = await uploadBillImage(storagePath, testBuffer, "image/png");
+      expect(result.storagePath).toBe(storagePath);
+      expect(result.provider).toBeDefined();
+
+      const viewUrl = await getBillViewUrl(storagePath);
+      expect(viewUrl).not.toBeNull();
+    });
+  });
 });
