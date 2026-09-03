@@ -49,6 +49,28 @@ export const BusinessCreateSchema = z.object({
   businessToken: z.string().min(8).max(32).optional(),
 });
 
+export const BusinessSetupSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Business name must be at least 2 characters")
+    .max(100, "Business name must be less than 100 characters")
+    .trim(),
+  programName: z.string().min(2, "Program name must be at least 2 characters").max(100).trim(),
+  requiredVisits: z.number().int().min(1, "Required visits must be at least 1").max(100, "Required visits must be at most 100"),
+  rewardTitle: z.string().min(2, "Reward title must be at least 2 characters").max(100).trim(),
+  rewardDescription: z.string().max(500).trim().default(""),
+  rewardValidityDays: z.number().int().min(1, "Validity must be at least 1 day").max(365, "Validity must be at most 365 days").default(30),
+  verificationMethod: VerificationMethodSchema.default("VISIT_CONFIRMATION"),
+});
+
+export const BusinessUpdateSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Business name must be at least 2 characters")
+    .max(100, "Business name must be less than 100 characters")
+    .trim(),
+});
+
 export const LoyaltyProgramSchema = z.object({
   programName: z.string().min(2).max(100).trim(),
   requiredVisits: z.number().int().min(1, "At least 1 visit required").max(100),
