@@ -4,7 +4,7 @@ import { hashPassword } from "../lib/auth";
 import { UserRole, VerificationMethod } from "@prisma/client";
 import { generateBusinessToken, isValidBusinessToken } from "../lib/token";
 import { BusinessSetupSchema, BusinessUpdateSchema, LoyaltyProgramSchema } from "../lib/validations";
-import { getBusinessJoinUrl, generateQRCodeDataUrl } from "../lib/qr";
+import { getBusinessJoinUrl, generateQRCodeDataUrl, generateQRCodeSvg } from "../lib/qr";
 
 describe("Phase 3 Checkpoint 1 — Backend Business Setup & APIs", () => {
   const timestamp = Date.now();
@@ -514,9 +514,43 @@ describe("Phase 3 Checkpoint 1 — Backend Business Setup & APIs", () => {
       const qrDataUrl = await generateQRCodeDataUrl(joinUrl);
       expect(qrDataUrl).toMatch(/^data:image\/png;base64,/);
 
+      const qrSvg = await generateQRCodeSvg(joinUrl);
+      expect(qrSvg).toContain("<svg");
+      expect(qrSvg).toContain("viewBox=");
+
+      // Re-running QR generation 5 times must never modify the database token
+      for (let i = 0; i < 5; i++) {
+        const svg = await generateQRCodeSvg(joinUrl);
+        expect(svg).toBe(qrSvg);
+      }
+
       // Verify token in DB remains identical
       const check = await prisma.business.findUnique({ where: { id: businessAId } });
       expect(check?.businessToken).toBe(businessAToken);
+      expect(check?.ownerId).toBe(ownerAId);
+    });
+
+    it("unconfigured owner has no QR identity and resolves null safely", async () => {
+      const unconfigured = await prisma.business.findUnique({
+        where: { ownerId: ownerBId },
+      });
+      // Owner B has businessB created in beforeAll, so let's test a brand new unconfigured owner
+      const freshOwner = await prisma.user.create({
+        data: {
+          email: `unconfigured.${Date.now()}@example.test`,
+          name: "Fresh Owner",
+          passwordHash: "hash",
+          role: UserRole.BUSINESS_OWNER,
+        },
+      });
+
+      const result = await prisma.business.findUnique({
+        where: { ownerId: freshOwner.id },
+      });
+      expect(result).toBeNull();
+
+      // Clean up
+      await prisma.user.delete({ where: { id: freshOwner.id } });
     });
 
     it("Business Owner can access their QR page while Customer is rejected", async () => {

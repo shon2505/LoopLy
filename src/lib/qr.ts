@@ -2,19 +2,25 @@ import QRCode from "qrcode";
 
 /**
  * Returns the permanent public join URL for a business token.
+ * Validates environment configuration safely.
  */
 export function getBusinessJoinUrl(businessToken: string): string {
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const rawUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  if (!rawUrl || typeof rawUrl !== "string" || rawUrl.trim() === "") {
+    throw new Error("NEXT_PUBLIC_APP_URL is missing or invalid in environment configuration.");
+  }
+  const appUrl = rawUrl.trim().replace(/\/$/, "");
   return `${appUrl}/join/${businessToken}`;
 }
 
 /**
- * Generates a PNG data URL for a given text/URL.
- * Optimized for mobile display and crisp printing.
+ * Generates an SVG string for a given text/URL.
+ * Native vector format: immune to base64 length limits, crisp at all resolutions.
  */
-export async function generateQRCodeDataUrl(text: string): Promise<string> {
-  return QRCode.toDataURL(text, {
-    width: 512,
+export async function generateQRCodeSvg(text: string): Promise<string> {
+  return QRCode.toString(text, {
+    type: "svg",
+    width: 240,
     margin: 2,
     errorCorrectionLevel: "M",
     color: {
@@ -25,11 +31,12 @@ export async function generateQRCodeDataUrl(text: string): Promise<string> {
 }
 
 /**
- * Generates an SVG string for a given text/URL.
+ * Generates a PNG data URL for a given text/URL.
+ * Used for direct file downloads.
  */
-export async function generateQRCodeSvg(text: string): Promise<string> {
-  return QRCode.toString(text, {
-    type: "svg",
+export async function generateQRCodeDataUrl(text: string): Promise<string> {
+  return QRCode.toDataURL(text, {
+    width: 512,
     margin: 2,
     errorCorrectionLevel: "M",
     color: {
