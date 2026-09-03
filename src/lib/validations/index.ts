@@ -72,11 +72,11 @@ export const BusinessUpdateSchema = z.object({
 });
 
 export const LoyaltyProgramSchema = z.object({
-  programName: z.string().min(2).max(100).trim(),
-  requiredVisits: z.number().int().min(1, "At least 1 visit required").max(100),
-  rewardTitle: z.string().min(2).max(100).trim(),
-  rewardDescription: z.string().max(500).trim().default(""),
-  rewardValidityDays: z.number().int().min(1).max(365).default(30),
+  programName: z.string().min(2, "Program name must be at least 2 characters").max(100, "Program name must be at most 100 characters").trim(),
+  requiredVisits: z.number().int().min(1, "Required visits must be at least 1").max(100, "Required visits must be at most 100"),
+  rewardTitle: z.string().min(2, "Reward title must be at least 2 characters").max(100, "Reward title must be at most 100 characters").trim(),
+  rewardDescription: z.string().max(500, "Reward description must be at most 500 characters").trim().default(""),
+  rewardValidityDays: z.number().int().min(1, "Validity must be at least 1 day").max(365, "Validity must be at most 365 days").default(30),
   verificationMethod: VerificationMethodSchema.default("VISIT_CONFIRMATION"),
   isActive: z.boolean().default(true),
 });
