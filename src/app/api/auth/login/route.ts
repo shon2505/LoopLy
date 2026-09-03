@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Server-side Role Consistency Check
-    if (selectedRole && selectedRole !== user.role) {
+    // 6. Server-side Role Consistency Check (Strictly Enforced)
+    if (selectedRole !== user.role) {
       if (user.role === "BUSINESS_OWNER") {
         return NextResponse.json(
           {

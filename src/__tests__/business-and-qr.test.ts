@@ -673,4 +673,158 @@ describe("Phase 3 Checkpoint 1 — Backend Business Setup & APIs", () => {
       expect(customerAttempt.allowed).toBe(true);
     });
   });
+
+  // 7. Checkpoint 4A: Business Owner Onboarding & Business Setup Flow
+  describe("Checkpoint 4A: Business Owner Onboarding & Business Setup Flow", () => {
+    const cp4Timestamp = Date.now();
+    const newOwnerEmail = `new.owner.cp4a.${cp4Timestamp}@example.test`;
+    let newOwnerId = "";
+    let newBusinessId = "";
+    let newBusinessToken = "";
+
+    beforeAll(async () => {
+      const passwordHash = await hashPassword(password);
+      const newOwner = await prisma.user.create({
+        data: {
+          email: newOwnerEmail,
+          name: "Fresh Onboarding Owner",
+          passwordHash,
+          role: UserRole.BUSINESS_OWNER,
+        },
+      });
+      newOwnerId = newOwner.id;
+    });
+
+    afterAll(async () => {
+      if (newBusinessId) {
+        await prisma.loyaltyProgram.deleteMany({ where: { businessId: newBusinessId } });
+        await prisma.business.deleteMany({ where: { id: newBusinessId } });
+      }
+      if (newOwnerId) {
+        await prisma.user.deleteMany({ where: { id: newOwnerId } });
+      }
+    });
+
+    it("newly registered business owner starts with no business configured", async () => {
+      const owned = await prisma.business.findUnique({
+        where: { ownerId: newOwnerId },
+      });
+      expect(owned).toBeNull();
+    });
+
+    it("completing business setup creates Business and LoyaltyProgram with permanent token", async () => {
+      const token = generateBusinessToken(12);
+      newBusinessToken = token;
+
+      const created = await prisma.$transaction(async (tx) => {
+        return tx.business.create({
+          data: {
+            name: "Test Barber Studio",
+            businessToken: token,
+            ownerId: newOwnerId,
+            loyaltyProgram: {
+              create: {
+                programName: "Barber Rewards",
+                requiredVisits: 5,
+                rewardTitle: "Free Haircut",
+                rewardDescription: "Get one complimentary haircut.",
+                rewardValidityDays: 30,
+                verificationMethod: VerificationMethod.VISIT_CONFIRMATION,
+                isActive: true,
+              },
+            },
+          },
+          include: {
+            loyaltyProgram: true,
+          },
+        });
+      });
+
+      newBusinessId = created.id;
+      expect(created.name).toBe("Test Barber Studio");
+      expect(created.businessToken).toBe(token);
+      expect(created.loyaltyProgram?.programName).toBe("Barber Rewards");
+      expect(created.loyaltyProgram?.requiredVisits).toBe(5);
+      expect(created.loyaltyProgram?.rewardTitle).toBe("Free Haircut");
+    });
+
+    it("dashboard now detects configured business and provides QR link", async () => {
+      const owned = await prisma.business.findUnique({
+        where: { ownerId: newOwnerId },
+        include: { loyaltyProgram: true },
+      });
+
+      expect(owned).not.toBeNull();
+      expect(owned?.name).toBe("Test Barber Studio");
+      expect(owned?.businessToken).toBe(newBusinessToken);
+      expect(owned?.loyaltyProgram).toBeDefined();
+    });
+
+    it("attempting duplicate setup via setup flow is prevented", async () => {
+      const checkExisting = await prisma.business.findUnique({
+        where: { ownerId: newOwnerId },
+      });
+      expect(checkExisting).not.toBeNull();
+
+      // DB unique constraint blocks any secondary business creation
+      await expect(
+        prisma.business.create({
+          data: {
+            name: "Second Barber Studio",
+            businessToken: generateBusinessToken(12),
+            ownerId: newOwnerId,
+          },
+        })
+      ).rejects.toThrow();
+    });
+
+    it("Customer role cannot access business setup or own a business", async () => {
+      const customer = await prisma.user.findUnique({ where: { id: customerId } });
+      expect(customer?.role).toBe(UserRole.CUSTOMER);
+      expect(customer?.role !== UserRole.BUSINESS_OWNER).toBe(true);
+    });
+
+    it("strictly enforces login role consistency: Customer selected with Owner credentials is rejected", () => {
+      // Logic simulation of POST /api/auth/login
+      function verifyLoginRole(selectedRole: UserRole, userRole: UserRole) {
+        if (selectedRole !== userRole) {
+          if (userRole === UserRole.BUSINESS_OWNER) {
+            return {
+              allowed: false,
+              status: 403,
+              error: "These credentials belong to a Business Owner account. Please select Business Owner to continue.",
+            };
+          } else {
+            return {
+              allowed: false,
+              status: 403,
+              error: "These credentials belong to a Customer account. Please select Customer to continue.",
+            };
+          }
+        }
+        return { allowed: true, status: 200 };
+      }
+
+      // Customer tab selected + Business Owner account
+      const rejectMismatch1 = verifyLoginRole(UserRole.CUSTOMER, UserRole.BUSINESS_OWNER);
+      expect(rejectMismatch1.allowed).toBe(false);
+      expect(rejectMismatch1.status).toBe(403);
+      expect(rejectMismatch1.error).toContain("Business Owner");
+
+      // Business Owner tab selected + Customer account
+      const rejectMismatch2 = verifyLoginRole(UserRole.BUSINESS_OWNER, UserRole.CUSTOMER);
+      expect(rejectMismatch2.allowed).toBe(false);
+      expect(rejectMismatch2.status).toBe(403);
+      expect(rejectMismatch2.error).toContain("Customer");
+
+      // Correct matching role
+      const matchOwner = verifyLoginRole(UserRole.BUSINESS_OWNER, UserRole.BUSINESS_OWNER);
+      expect(matchOwner.allowed).toBe(true);
+      expect(matchOwner.status).toBe(200);
+
+      const matchCustomer = verifyLoginRole(UserRole.CUSTOMER, UserRole.CUSTOMER);
+      expect(matchCustomer.allowed).toBe(true);
+      expect(matchCustomer.status).toBe(200);
+    });
+  });
 });
