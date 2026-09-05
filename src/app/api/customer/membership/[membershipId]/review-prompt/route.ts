@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { membershipId: string } }
 ) {
   try {
     const user = await getCurrentUser();
@@ -15,11 +15,11 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const { membershipId } = params;
     
     // Update the reviewPromptedAt timestamp
     await prisma.membership.update({
-      where: { id, customerId: user.id },
+      where: { id: membershipId, customerId: user.id },
       data: { reviewPromptedAt: new Date() },
     });
 
