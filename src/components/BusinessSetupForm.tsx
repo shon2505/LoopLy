@@ -386,7 +386,7 @@ export default function BusinessSetupForm() {
             placeholder="https://g.page/r/.../review"
             className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
           />
-          <span className="text-[10px] text-slate-400 mt-1 block">We'll ask loyal customers to leave a review!</span>
+          <span className="text-[10px] text-slate-400 mt-1 block">We&apos;ll ask loyal customers to leave a review!</span>
         </div>
       </div>
 

@@ -52,9 +52,6 @@ export async function POST(request: NextRequest) {
       rewardType,
       googleReviewUrl,
       instagramHandle,
-      rewardType,
-      googleReviewUrl,
-      instagramHandle,
     } = parsed.data;
 
     // 4. Generate permanent unique businessToken

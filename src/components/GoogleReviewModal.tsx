@@ -81,7 +81,7 @@ export default function GoogleReviewModal({
               onClick={handleReviewClick}
               className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm"
             >
-              Sure, I'll leave a review!
+              Sure, I&apos;ll leave a review!
             </button>
             <button
               onClick={handleDismiss}
