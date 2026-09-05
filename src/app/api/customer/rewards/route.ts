@@ -19,10 +19,14 @@ export async function GET() {
     });
 
     const now = new Date();
-    const enriched = rewards.map((r) => ({
-      ...r,
-      status: r.status === "AVAILABLE" && r.expiresAt <= now ? "EXPIRED" : r.status,
-    }));
+    const enriched = rewards.map((r) => {
+      const { revealedPrize, ...safeReward } = r;
+      return {
+        ...safeReward,
+        revealedPrize: r.isScratched ? revealedPrize : undefined,
+        status: r.status === "AVAILABLE" && r.expiresAt <= now ? "EXPIRED" : r.status,
+      };
+    });
 
     return NextResponse.json({ rewards: enriched });
   } catch (err: unknown) {

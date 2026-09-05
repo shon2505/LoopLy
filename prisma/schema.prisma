@@ -11,6 +11,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // -----------------------------------------------------------------------------
@@ -37,6 +38,11 @@ enum RewardStatus {
   AVAILABLE
   REDEEMED
   EXPIRED
+}
+
+enum RewardType {
+  STANDARD
+  SCRATCH_CARD
 }
 
 // -----------------------------------------------------------------------------
@@ -93,6 +99,10 @@ model Business {
   businessToken String   @unique
   ownerId       String   @unique
   owner         User     @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  
+  googleReviewUrl String?
+  instagramHandle String?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -116,6 +126,7 @@ model LoyaltyProgram {
   rewardDescription  String
   rewardValidityDays Int                @default(30)
   verificationMethod VerificationMethod @default(VISIT_CONFIRMATION)
+  rewardType         RewardType         @default(STANDARD)
   isActive           Boolean            @default(true)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
@@ -137,6 +148,7 @@ model Membership {
   business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   currentVisits Int      @default(0) // Progress towards current reward threshold
   totalVisits   Int      @default(0) // Lifetime verified visits count
+  reviewPromptedAt DateTime?
   joinedAt      DateTime @default(now())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -218,6 +230,9 @@ model Reward {
   title            String
   description      String
   status           RewardStatus   @default(AVAILABLE)
+  type             RewardType     @default(STANDARD)
+  isScratched      Boolean        @default(false)
+  revealedPrize    String?
   expiresAt        DateTime
   redeemedAt       DateTime?
   redeemedByUserId String?

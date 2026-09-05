@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { UserRole, RequestStatus } from "@prisma/client";
 import VisitRequestButton from "@/components/VisitRequestButton";
+import InstagramButton from "@/components/InstagramButton";
+import GoogleReviewModal from "@/components/GoogleReviewModal";
 import {
   ArrowLeft,
   Award,
@@ -100,6 +102,9 @@ export default async function MembershipDetailPage({ params }: Props) {
               <div>
                 <h1 className="text-lg font-bold text-slate-900">{membership.business.name}</h1>
                 <p className="text-xs text-slate-500">{program.programName}</p>
+                {membership.business.instagramHandle && (
+                  <InstagramButton handle={membership.business.instagramHandle} />
+                )}
               </div>
             </div>
             {!program.isActive && (
@@ -248,6 +253,14 @@ export default async function MembershipDetailPage({ params }: Props) {
       <footer className="bg-white border-t border-slate-200 py-5 text-center text-xs text-slate-400">
         Looply &copy; {new Date().getFullYear()} — Simple Small Business Loyalty
       </footer>
+
+      <GoogleReviewModal
+        membershipId={membership.id}
+        businessName={membership.business.name}
+        googleReviewUrl={membership.business.googleReviewUrl || ""}
+        currentVisits={membership.currentVisits}
+        reviewPromptedAt={membership.reviewPromptedAt}
+      />
     </div>
   );
 }

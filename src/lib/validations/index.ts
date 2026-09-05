@@ -16,6 +16,9 @@ export type RequestStatus = z.infer<typeof RequestStatusSchema>;
 export const RewardStatusSchema = z.enum(["AVAILABLE", "REDEEMED", "EXPIRED"]);
 export type RewardStatus = z.infer<typeof RewardStatusSchema>;
 
+export const RewardTypeSchema = z.enum(["STANDARD", "SCRATCH_CARD"]);
+export type RewardType = z.infer<typeof RewardTypeSchema>;
+
 // =============================================================================
 // VALIDATION SCHEMAS
 // =============================================================================
@@ -61,6 +64,9 @@ export const BusinessSetupSchema = z.object({
   rewardDescription: z.string().max(500).trim().default(""),
   rewardValidityDays: z.number().int().min(1, "Validity must be at least 1 day").max(365, "Validity must be at most 365 days").default(30),
   verificationMethod: VerificationMethodSchema.default("VISIT_CONFIRMATION"),
+  rewardType: RewardTypeSchema.default("STANDARD"),
+  googleReviewUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  instagramHandle: z.string().optional().or(z.literal("")),
 });
 
 export const BusinessUpdateSchema = z.object({

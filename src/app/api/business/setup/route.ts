@@ -49,6 +49,9 @@ export async function POST(request: NextRequest) {
       rewardDescription,
       rewardValidityDays,
       verificationMethod,
+      rewardType,
+      googleReviewUrl,
+      instagramHandle,
     } = parsed.data;
 
     // 4. Generate permanent unique businessToken
@@ -61,6 +64,8 @@ export async function POST(request: NextRequest) {
           name,
           businessToken,
           ownerId: user.id,
+          googleReviewUrl: googleReviewUrl || null,
+          instagramHandle: instagramHandle || null,
           loyaltyProgram: {
             create: {
               programName,
@@ -69,6 +74,7 @@ export async function POST(request: NextRequest) {
               rewardDescription,
               rewardValidityDays,
               verificationMethod,
+              rewardType,
               isActive: true,
             },
           },
