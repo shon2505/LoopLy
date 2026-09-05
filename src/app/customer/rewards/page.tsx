@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { UserRole } from "@prisma/client";
 import LogoutButton from "@/components/LogoutButton";
+import RewardCard from "@/components/RewardCard";
 import { ArrowLeft, Sparkles, Gift, Award, ShieldCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -66,29 +67,7 @@ export default async function CustomerRewardsPage() {
             </div>
           ) : (
             available.map((r) => (
-              <div key={r.id} className="bg-white rounded-2xl border border-emerald-200 p-5 shadow-xs">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                      <Award className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-emerald-900">{r.title}</p>
-                      <p className="text-xs text-slate-600 mt-0.5">{r.business.name}</p>
-                      {r.description && <p className="text-[11px] text-slate-500 mt-1">{r.description}</p>}
-                      <p className="text-[11px] text-slate-400 mt-2">
-                        Expires: {r.expiresAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold whitespace-nowrap">
-                    Ready to Claim
-                  </span>
-                </div>
-                <div className="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-800 text-center font-medium">
-                  🎉 Show this screen to the business owner to claim your reward!
-                </div>
-              </div>
+              <RewardCard key={r.id} reward={r} />
             ))
           )}
         </section>

@@ -14,6 +14,10 @@ import {
   ArrowRight,
   Loader2,
   AlertCircle,
+  Gift,
+  Link,
+  Instagram,
+  Star,
 } from "lucide-react";
 
 export default function BusinessSetupForm() {
@@ -25,6 +29,9 @@ export default function BusinessSetupForm() {
   const [rewardTitle, setRewardTitle] = useState("");
   const [rewardDescription, setRewardDescription] = useState("");
   const [rewardValidityDays, setRewardValidityDays] = useState(30);
+  const [rewardType, setRewardType] = useState<"STANDARD" | "SCRATCH_CARD">("STANDARD");
+  const [googleReviewUrl, setGoogleReviewUrl] = useState("");
+  const [instagramHandle, setInstagramHandle] = useState("");
   const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>(
     VerificationMethod.VISIT_CONFIRMATION
   );
@@ -71,6 +78,9 @@ export default function BusinessSetupForm() {
           rewardTitle: rewardTitle.trim(),
           rewardDescription: rewardDescription.trim(),
           rewardValidityDays: Number(rewardValidityDays),
+          rewardType,
+          googleReviewUrl: googleReviewUrl.trim(),
+          instagramHandle: instagramHandle.trim(),
           verificationMethod,
         }),
       });
@@ -233,6 +243,43 @@ export default function BusinessSetupForm() {
             className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors resize-none"
           />
         </div>
+
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold text-slate-800">
+            Reward Type <span className="text-rose-500">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setRewardType("STANDARD")}
+              className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-colors ${
+                rewardType === "STANDARD"
+                  ? "bg-indigo-50 border-indigo-300 ring-1 ring-indigo-200 text-indigo-700"
+                  : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+              }`}
+            >
+              <Gift className="w-5 h-5" />
+              <span className="text-xs font-semibold">Standard Reward</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRewardType("SCRATCH_CARD")}
+              className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-colors ${
+                rewardType === "SCRATCH_CARD"
+                  ? "bg-indigo-50 border-indigo-300 ring-1 ring-indigo-200 text-indigo-700"
+                  : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+              }`}
+            >
+              <Sparkles className="w-5 h-5" />
+              <span className="text-xs font-semibold">Gamified Scratch Card</span>
+            </button>
+          </div>
+          {rewardType === "SCRATCH_CARD" && (
+            <p className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
+              Customers will scratch to win! They get a 60% chance for a small bonus, 15% for a medium bonus, 5% for a grand bonus, and 20% to just get the standard reward.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Section 3: Verification Method */}
@@ -291,6 +338,55 @@ export default function BusinessSetupForm() {
               </p>
             </div>
           </label>
+        </div>
+      </div>
+
+      {/* Section 4: Social & Reviews */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 pb-1 border-b border-slate-200">
+          <Link className="w-3.5 h-3.5 text-indigo-600" />
+          Social & Reviews (Optional)
+        </div>
+
+        <div>
+          <label
+            htmlFor="instagram-handle"
+            className="block text-xs font-semibold text-slate-800 mb-1 flex items-center gap-1"
+          >
+            <Instagram className="w-3 h-3 text-pink-600" /> Instagram Handle
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-2.5 text-xs text-slate-400">@</span>
+            <input
+              id="instagram-handle"
+              type="text"
+              value={instagramHandle}
+              onChange={(e) => {
+                const val = e.target.value.startsWith("@") ? e.target.value.substring(1) : e.target.value;
+                setInstagramHandle(val);
+              }}
+              placeholder="looply_cafe"
+              className="w-full pl-7 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor="google-review"
+            className="block text-xs font-semibold text-slate-800 mb-1 flex items-center gap-1"
+          >
+            <Star className="w-3 h-3 text-yellow-500" /> Google Review URL
+          </label>
+          <input
+            id="google-review"
+            type="url"
+            value={googleReviewUrl}
+            onChange={(e) => setGoogleReviewUrl(e.target.value)}
+            placeholder="https://g.page/r/.../review"
+            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
+          />
+          <span className="text-[10px] text-slate-400 mt-1 block">We'll ask loyal customers to leave a review!</span>
         </div>
       </div>
 

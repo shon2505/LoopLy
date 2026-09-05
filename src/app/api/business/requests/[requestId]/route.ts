@@ -111,13 +111,27 @@ export async function PATCH(
         },
       });
 
-      const { requiredVisits, rewardTitle, rewardDescription, rewardValidityDays, id: loyaltyProgramId } =
+      const { requiredVisits, rewardTitle, rewardDescription, rewardValidityDays, rewardType, id: loyaltyProgramId } =
         business.loyaltyProgram!;
 
       let reward = null;
 
       // 4. Check threshold and create reward if earned
       if (updatedMembership.currentVisits >= requiredVisits) {
+        let revealedPrize = null;
+        if (rewardType === "SCRATCH_CARD") {
+          const rand = Math.random() * 100;
+          if (rand < 5) {
+            revealedPrize = `${rewardTitle} & 50% Off Next Item (Grand Prize!)`;
+          } else if (rand < 20) {
+            revealedPrize = `${rewardTitle} & Free Extra Item (Medium Prize!)`;
+          } else if (rand < 80) {
+            revealedPrize = `${rewardTitle} & 10% Off Next Item (Small Prize!)`;
+          } else {
+            revealedPrize = rewardTitle; // 20% no bonus
+          }
+        }
+
         reward = await tx.reward.create({
           data: {
             membershipId: vr.membershipId,
@@ -127,6 +141,8 @@ export async function PATCH(
             title: rewardTitle,
             description: rewardDescription,
             status: "AVAILABLE",
+            type: rewardType,
+            revealedPrize,
             expiresAt: new Date(now.getTime() + rewardValidityDays * 24 * 60 * 60 * 1000),
           },
         });
